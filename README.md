@@ -12,7 +12,7 @@ Create a subnet called "servernet" with IP range 10.10.0.0/16:
 $ docker network create --subnet=10.10.0.0/16 servernet
 
 Run instances(replicas) in the network:  
-$ docker run --rm -p _(port number):8090 --net=servernet --ip=10.10.0._ --name=_(replica name) -e=SHARD_COUNT=_(number of shards) -e=SOCKET_ADDRESS=10.10.0._:8090 -e=VIEW=10.10.0._:8090,10.10.0._:8090,10.10.0._:8090,10.10.0._:8090,10.10.0._:8090,10.10.0._:8090 serverimg
+$ docker run --rm -p _(port number):8090 --net=servernet --ip=10.10.0._$ --name=_(replica name) -e=SHARD_COUNT=_(number of shards) -e=SOCKET_ADDRESS=10.10.0._$:8090 -e=VIEW=10.10.0._$:8090,10.10.0._$:8090,10.10.0._$:8090,... serverimg
 
 ## Causal Dependency Mechanism
 
