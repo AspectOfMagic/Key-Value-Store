@@ -1,6 +1,17 @@
 # Key-Value Store
 Author of server.c and Dockerfile: Jason Wu
 
+## Installation
+You will need Docker
+
+## Usage
+Build the container image and tag it "serverimg": 
+$ docker build -t serverimg . 
+Create a subnet called "servernet" with IP range 10.10.0.0/16: 
+$ docker network create --subnet=10.10.0.0/16 servernet 
+Run instances(replicas) in the network: 
+$ docker run --rm -p _(port number):8090 --net=servernet --ip=10.10.0._ --name=_(replica name) -e=SHARD_COUNT=_(number of shards) -e=SOCKET_ADDRESS=10.10.0._:8090 -e=VIEW=10.10.0._:8090,10.10.0._:8090,10.10.0._:8090,10.10.0._:8090,10.10.0._:8090,10.10.0._:8090 serverimg
+
 ## Causal Dependency Mechanism
 
 In order to implement causal consistency, I implement vector clocks as casual metadata for both message sends as well as local event history on each replica. This is implemented as a dictionary where the key is a replica's socket address and the corresponding value is the number of write requests (such as PUT or DELETE requests) that have arrived at that particular replica from a client. Prior to any write requests occurring, all clock values are initialized to zero. When a replica receives a request, it compares its own vector clock to the casual metadata field of the received request. Requests coming from a client and requests coming as the result of a write broadcast from one replica to all other replicas are handled slightly differently through the use of a special socket-address request field that is either blank, indicating that a request is coming from a client, or contains the socket address of the replica it is coming from, indicating that the request is coming from another replica.
