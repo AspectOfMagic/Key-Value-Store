@@ -15,11 +15,11 @@ Create a subnet called "servernet" with IP range 10.10.0.0/16:
 $ docker network create --subnet=10.10.0.0/16 servernet
 
 Run instances(replicas) in the network:  
-$ docker run --rm -p (port number):8090 --net=servernet --ip=10.10.0.(2~16) --name=(replica name) -e=SHARD_COUNT=(number of shards) -e=SOCKET_ADDRESS=10.10.0.(2~16):8090 -e=VIEW=10.10.0.(2~16):8090,10.10.0.(2~16):8090,10.10.0.(2~16):8090,... serverimg
+$ docker run --rm -p (port number):8090 --net=servernet --ip=10.10.0.x --name=(replica name) -e=SHARD_COUNT=(number of shards) -e=SOCKET_ADDRESS=10.10.0.x:8090 -e=VIEW=10.10.0.x:8090,10.10.0.y:8090,10.10.0.z:8090,... serverimg
 
 SOCKET_ADDRESS: a string in the format "IP:PORT" describing the current node.  
 VIEW: a comma-delimited string containing the socket addresses of all the running instances.  
-SHARD_COUNT: the number of shards to divide instances(and keys) into.
+x, y, z: numbers between 2 and 16
 
 ## Causal Dependency Mechanism
 
