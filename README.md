@@ -1,6 +1,9 @@
 # Key-Value Store
 Author of server.c and Dockerfile: Jason Wu
 
+## Introduction
+The program, written entirely in Python, is a sharded, replicated, fault-tolerant and causally consistent key-value store.
+
 ## Installation
 You will need Docker
 
@@ -12,7 +15,11 @@ Create a subnet called "servernet" with IP range 10.10.0.0/16:
 $ docker network create --subnet=10.10.0.0/16 servernet
 
 Run instances(replicas) in the network:  
-$ docker run --rm -p _(port number):8090 --net=servernet --ip=10.10.0._$ --name=_(replica name) -e=SHARD_COUNT=_(number of shards) -e=SOCKET_ADDRESS=10.10.0._$:8090 -e=VIEW=10.10.0._$:8090,10.10.0._$:8090,10.10.0._$:8090,... serverimg
+$ docker run --rm -p (port number):8090 --net=servernet --ip=10.10.0.(2~16) --name=(replica name) -e=SHARD_COUNT=(number of shards) -e=SOCKET_ADDRESS=10.10.0.(2~16):8090 -e=VIEW=10.10.0.(2~16):8090,10.10.0.(2~16):8090,10.10.0.(2~16):8090,... serverimg
+
+SOCKET_ADDRESS: a string in the format "IP:PORT" describing the current node.  
+VIEW: a comma-delimited string containing the socket addresses of all the running instances.  
+SHARD_COUNT: the number of shards to divide instances(and keys) into.
 
 ## Causal Dependency Mechanism
 
