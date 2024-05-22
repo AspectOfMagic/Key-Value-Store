@@ -24,23 +24,56 @@ $ docker run --rm -p (port number):8090 --net=servernet --ip=10.10.0.x --name=(r
 
 ## Causal Dependency Mechanism
 
-In order to implement causal consistency, vector clocks are used as casual metadata for both message sends as well as local event history on each replica. This is implemented as a dictionary where the key is a replica's socket address and the corresponding value is the number of write requests (such as PUT or DELETE requests) that have arrived at that particular replica from a client. Prior to any write requests occurring, all clock values are initialized to zero. When a replica receives a request, it compares its own vector clock to the casual metadata field of the received request. Requests coming from a client and requests coming as the result of a write broadcast from one replica to all other replicas are handled slightly differently through the use of a special socket-address request field that is either blank, indicating that a request is coming from a client, or contains the socket address of the replica it is coming from, indicating that the request is coming from another replica.
+### Overview
 
-In the case of a request coming from a sender, the request is safe to handle if the vector clock of the receiving replica is equivalent to the causal metadata sent in the message (indicating that causal dependencies have been satisfied), or if the casual-metadata field is null, indicating that there are no causal dependencies that need to be satisfied (i.e. the request is the first one being handled by any replica during a single execution's runtime). If the request is a write, such as a PUT or DELETE, then a replica must update their vector clock by adding one to the clock value at its own socket address key, then broadcast the request to all the other replicas to ensure that they update their local key-value stores as well; the broadcasting replica also includes its socket address as a request field to indicate that the request is replica-to-replica.Otherwise, any differences between the casual metadata of the message and the local vector clock of the replica indicates that causal dependencies have not been satisfied, and a 503 response is returned to the client.
+In order to achieve causal consistency, vector clocks are utilized as metadata for tracking message sends and local event history on each replica.
 
-For the case of a request occuring as part of a write broadcast from another replica, where the sending replica's socket address is included as part of the request fields, I slightly change my approach by checking to see instead that the clock value at the sender's position in the message's causal metadata field is strictly greater by one than the receiver's local vector clock value at the sender's position, and that all other clock values from the message's causal metadata are less than or equal to their corresponding values in the receiver's vector clock. If so, then there is no violation of causal dependencies and the write operation is safe to process. The receiving replica then also updates its own vector clock by incrementing the value at the sending replica's socket address position. Any other result in the comparison between the message's casual metadata and the receiving replica's local vector clock indicates that causal dependencies have not been satisfied yet on the receiving replica, and a 503 response is returned to the sending replica, signaling that the request to that specific replica will have to be retried.
+### Vector Clocks Setup
 
-With the addition of sharding in assignment 4, writes are only propagated to the other replicas in the same shard as opposed to every other replica, while replicas located in other shards are notified to update their vector clocks only for causal consistency purposes and not their key-value stores as well.
+Each replica maintains a vector clock, represented as a dictionary where the key is the replica's socket address and the value is the number of write requests (e.g., PUT or DELETE) it has received. Initially, all clock values are set to zero.
 
-Through this implementation of vector clocks, I am able to ensure that causal consistency is never violated.
+### Handling Requests
+
+#### From Clients
+
+When a replica receives a request from a client:
+- It compares its vector clock with the causal metadata in the request.
+- If the metadata is null (indicating no dependencies) or matches the replica's clock, the request is processed.
+- For a write request, the replica updates its vector clock and broadcasts the request to other replicas, including its socket address in the request to indicate it's a replica-to-replica message.
+
+#### From Other Replicas
+
+When a replica receives a write request from another replica:
+- It checks if the sender's clock value is one more than its own for the sender's address and that all other values are equal or lower.
+- If the conditions are met, it processes the write and updates its clock.
+- Otherwise, it returns a 503 response, indicating the request must be retried later.
+
+### Sharding
+
+With sharding:
+- Writes are propagated only within the same shard.
+- Replicas in other shards update only their vector clocks, not their key-value stores.
+
+### Conclusion
+
+This implementation of vector clocks ensures that causal consistency is maintained across the system.
 
 ## Replica Failure Detection Mechanism
 
-Replica failure detection is implemented by checking for errors when a replica broadcasts a write operation to other replicas. When a client sends a successful write request to a replica, such as a PUT or DELETE, that replica will then broadcast this request to all other replicas in its view. During this broadcast, I choose to make the assumption that a crash has occured if a replica never returns a response to the broadcast request. For every replica that a broadcasting replica has determined has gone down through this method, it first deletes the replica from its own view, then broadcasts a DELETE /view call to the other working replicas so that they can remove that replica from their view as well.
+### Overview
 
-A case where a false positive might happen (a replica is deemed to be down when it is actually up) is if it takes an abnormally long time (longer than the set response timeout) to respond to a broadcast request, at which point the broadcasting replica may have already assumed it was down and taken the steps to remove the slow replica from its and other replicas' view.
+Replica failure detection is implemented to ensure system reliability. When a client sends a successful write request (e.g., PUT or DELETE) to a replica, the replica broadcasts this request to all other replicas in its view. If a replica fails to respond to the broadcast, it's assumed to have crashed.
 
-A case where a false negative might happen (where a replica is deemed to be up when it is actually down) might occur if a replica successfully sends a non-503 response back to a broadcasting replica and then immediately crashes, in which case the other replicas would not "know" that the particular replica is down as indicated by their vector clocks until the next broadcasted write occurs, at which a broadcasting replica would attempt to reach the downed replica again.
+### Handling Failed Replicas
+
+When a broadcasting replica detects a failed replica:
+- It removes the failed replica from its own view.
+- It broadcasts a DELETE /view call to other working replicas to remove the failed replica from their views as well.
+
+### Handling False Positives and Negatives
+
+- **False Positives:** A false positive may occur if a replica takes longer than the response timeout to respond to the broadcast, leading the broadcasting replica to assume it's down and remove it from the view.
+- **False Negatives:** A false negative may occur if a replica responds successfully but crashes immediately afterward. In such cases, other replicas won't know the replica is down until the next broadcasted write attempt.
 
 ## Key-to-Shard Mapping Mechanism
 
