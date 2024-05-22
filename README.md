@@ -37,7 +37,6 @@ Each replica maintains a vector clock, represented as a dictionary where the key
 #### From Clients
 
 ##### When a replica receives a request from a client:
-
 - It compares its vector clock with the causal metadata in the request.
 - If the metadata is null (indicating no dependencies) or matches the replica's clock, the request is processed.
 - For a write request, the replica updates its vector clock and broadcasts the request to other replicas, including its socket address in the request to indicate it's a replica-to-replica message.
@@ -45,7 +44,6 @@ Each replica maintains a vector clock, represented as a dictionary where the key
 #### From Other Replicas
 
 ##### When a replica receives a write request from another replica:
-
 - It checks if the sender's clock value is one more than its own for the sender's address and that all other values are equal or lower.
 - If the conditions are met, it processes the write and updates its clock.
 - Otherwise, it returns a 503 response, indicating the request must be retried later.
@@ -68,7 +66,6 @@ Replica failure detection is implemented to ensure system reliability. When a cl
 ### Handling Failed Replicas
 
 #### When a broadcasting replica detects a failed replica:
-
 - It removes the failed replica from its own view.
 - It broadcasts a DELETE /view call to other working replicas to remove the failed replica from their views as well.
 
