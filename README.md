@@ -69,7 +69,7 @@ Replica failure detection is implemented to ensure system reliability. When a cl
 - It removes the failed replica from its own view.
 - It broadcasts a DELETE /view call to other working replicas to remove the failed replica from their views as well.
 
-### Handling False Positives and Negatives
+### Cases of False Positives and Negatives
 
 - **False Positives:** A false positive may occur if a replica takes longer than the response timeout to respond to the broadcast, leading the broadcasting replica to assume it's down and remove it from the view.
 - **False Negatives:** A false negative may occur if a replica responds successfully but crashes immediately afterward. In such cases, other replicas won't know the replica is down until the next broadcasted write attempt.
